@@ -20,86 +20,8 @@
             font-weight: bold;
         }
     </style>
-    <script>
-        jQuery(document).ready(function($){
 
-            $.ajaxSetup({
-                beforeSend: function(xhr, settings) {
-                    console.log('beforesend');
-                    settings.data += "&_token=<?php echo csrf_token() ?>";
-                }
-            });
 
-            $('.editable').editable().on('hidden', function(e, reason){
-                var locale = $(this).data('locale');
-                if(reason === 'save'){
-                    $(this).removeClass('status-0').addClass('status-1');
-                }
-                if(reason === 'save' || reason === 'nochange') {
-                    var $next = $(this).closest('tr').next().find('.editable.locale-'+locale);
-                    setTimeout(function() {
-                        $next.editable('show');
-                    }, 300);
-                }
-            });
-
-            $('.group-select').on('change', function(){
-                var group = $(this).val();
-                if (group) {
-                    window.location.href = '<?php echo action('\Barryvdh\TranslationManager\Controller@getView') ?>/'+$(this).val();
-                } else {
-                    window.location.href = '<?php echo action('\Barryvdh\TranslationManager\Controller@getIndex') ?>';
-                }
-            });
-
-            $("a.delete-key").on('confirm:complete',function(event,result){
-                if(result)
-                {
-                    var row = $(this).closest('tr');
-                    var url = $(this).attr('href');
-                    var id = row.attr('id');
-                    $.post( url, {id: id}, function(){
-                        row.remove();
-                    } );
-                }
-                return false;
-            });
-
-            $('.form-import').on('ajax:success', function (e, data) {
-                $('div.success-import strong.counter').text(data.counter);
-                $('div.success-import').slideDown();
-                window.location.reload();
-            });
-
-            $('.form-find').on('ajax:success', function (e, data) {
-                $('div.success-find strong.counter').text(data.counter);
-                $('div.success-find').slideDown();
-                window.location.reload();
-            });
-
-            $('.form-publish').on('ajax:success', function (e, data) {
-                $('div.success-publish').slideDown();
-            });
-
-            $('.form-publish-all').on('ajax:success', function (e, data) {
-                $('div.success-publish-all').slideDown();
-            });
-            $('.enable-auto-translate-group').click(function (event) {
-                event.preventDefault();
-                $('.autotranslate-block-group').removeClass('hidden');
-                $('.enable-auto-translate-group').addClass('hidden');
-            })
-            $('#base-locale').change(function (event) {
-                console.log($(this).val());
-                $.cookie('base_locale', $(this).val());
-            })
-            if (typeof $.cookie('base_locale') !== 'undefined') {
-                $('#base-locale').val($.cookie('base_locale'));
-            }
-            $('.table').DataTable();
-
-        })
-    </script>
 </head>
 <body>
 <header class="navbar navbar-static-top navbar-inverse" id="top" role="banner">
@@ -117,7 +39,7 @@
         </div>
     </div>
 </header>
-<div class="container-fluid">
+<div class="container-fluid" style="padding-bottom: 60px;">
     <p>Warning, translations are not visible until they are exported back to the app/lang file, using <code>php artisan translation:export</code> command or publish button.</p>
     <div class="alert alert-success success-import" style="display:none;">
         <p>Done importing, processed <strong class="counter">N</strong> items! Reload this page to refresh the groups!</p>
@@ -198,7 +120,7 @@
                 <input type="submit" value="Add keys" class="btn btn-primary">
             </div>
         </form>
-        <div class="row d-none">
+        <div class="row" style="display: none">
             <div class="col-sm-2">
                 <span class="btn btn-default enable-auto-translate-group">Use Auto Translate</span>
             </div>
@@ -233,8 +155,8 @@
             </div>
         </form>
         <hr>
-        <h4>Total: <?= $numTranslations ?>, changed: <?= $numChanged ?></h4>
-        <table class="table">
+        <h4>Total keys: <?= $numKeys ?>, Total translations: <?= $numTranslations ?>, changed: <?= $numChanged ?></h4>
+        <table class="table" >
             <thead>
             <tr>
                 <th width="15%">Key</th>
@@ -246,33 +168,9 @@
                 <?php endif; ?>
             </tr>
             </thead>
-            <tbody>
+            <tbody id="table-body">
 
-            <?php foreach ($translations as $key => $translation): ?>
-                <tr id="<?php echo htmlentities($key, ENT_QUOTES, 'UTF-8', false) ?>">
-                    <td><?php echo htmlentities($key, ENT_QUOTES, 'UTF-8', false) ?></td>
-                    <?php foreach ($locales as $locale): ?>
-                        <?php $t = isset($translation[$locale]) ? $translation[$locale] : null ?>
 
-                        <td>
-                            <a href="#edit"
-                               class="editable status-<?php echo $t ? $t->status : 0 ?> locale-<?php echo $locale ?>"
-                               data-locale="<?php echo $locale ?>" data-name="<?php echo $locale . "|" . htmlentities($key, ENT_QUOTES, 'UTF-8', false) ?>"
-                               id="username" data-type="textarea" data-pk="<?php echo $t ? $t->id : 0 ?>"
-                               data-url="<?php echo $editUrl ?>"
-                               data-title="Enter translation"><?php echo $t ? htmlentities($t->value, ENT_QUOTES, 'UTF-8', false) : '' ?></a>
-                        </td>
-                    <?php endforeach; ?>
-                    <?php if ($deleteEnabled): ?>
-                        <td>
-                            <a href="<?php echo action('\Barryvdh\TranslationManager\Controller@postDelete', [$group, $key]) ?>"
-                               class="delete-key"
-                               data-confirm="Are you sure you want to delete the translations for '<?php echo htmlentities($key, ENT_QUOTES, 'UTF-8', false) ?>?"><span
-                                        class="glyphicon glyphicon-trash"></span></a>
-                        </td>
-                    <?php endif; ?>
-                </tr>
-            <?php endforeach; ?>
             </tbody>
         </table>
     <?php else: ?>
@@ -336,6 +234,124 @@
 
     <?php endif; ?>
 </div>
+<script>
+    jQuery(document).ready(function($){
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                console.log('beforesend');
+                settings.data += "&_token=<?php echo csrf_token() ?>";
+            }
+        });
+        var trrr = <?php echo json_encode($translations) ?>;
+        var locales = <?php echo json_encode($locales) ?>;
+        var ht = '';
+        $.each(trrr, function(key, tr) {
+            ht += "" +
+                "" +
+                "<tr id='"+ key +"'>" +
+                "<td>"+ key +"</td>" ;
+            $.each(locales,function (lkey,locale) {
+                let t = tr[locale] ?? null;
+                let s = t ? t['status'] : 0;
+                let val = t ? t['value'] : '';
+                ht+= "                        <td>" +
+                    "                            <a href=\"#edit\"" +
+                    "                               class='editable status-"+ s +" locale-"+ locale +"'" +
+                    "                               data-locale='"+ locale +"' data-name='"+ locale +"|"+ key +"'"+
+                    "                               id=\"username\" data-type=\"textarea\" data-pk='"+ s +"'"+
+                    "                               data-url=\"<?php echo $editUrl ?>\"\n"+
+                    "                               data-title=\"Enter translation\">"+ val +"</a>"+
+                    "                        </td>";
+
+            });
+//                      let tyre=   "
+//"                    <?php //if ($deleteEnabled): ?>//\n"+
+//"                        <td>\n"+
+//"                            <a href=\"<?php //echo action('\\Barryvdh\\TranslationManager\\Controller@postDelete', [$group, $key]) ?>//\"\n"+
+//"                               class=\"delete-key\"\n"+
+//"                               data-confirm=\"Are you sure you want to delete the translations for '<?php //echo htmlentities($key, ENT_QUOTES, 'UTF-8', false) ?>//?\"><span\n"+
+//"                                        class=\"glyphicon glyphicon-trash\"></span></a>\n"+
+//"                        </td>\n"+
+//"                    <?php //endif; ?>//\n"+
+            ht+="                <td></td></tr>";
+
+        });
+        // console.log(ht);
+        document.getElementById('table-body').innerHTML=ht;
+
+        $('.editable').editable().on('hidden', function(e, reason){
+            var locale = $(this).data('locale');
+            if(reason === 'save'){
+                $(this).removeClass('status-0').addClass('status-1');
+            }
+            if(reason === 'save' || reason === 'nochange') {
+                var $next = $(this).closest('tr').next().find('.editable.locale-'+locale);
+                setTimeout(function() {
+                    $next.editable('show');
+                }, 300);
+            }
+        });
+
+        $('.group-select').on('change', function(){
+            var group = $(this).val();
+            if (group) {
+                window.location.href = '<?php echo action('\Barryvdh\TranslationManager\Controller@getView') ?>/'+$(this).val();
+            } else {
+                window.location.href = '<?php echo action('\Barryvdh\TranslationManager\Controller@getIndex') ?>';
+            }
+        });
+
+        $("a.delete-key").on('confirm:complete',function(event,result){
+            if(result)
+            {
+                var row = $(this).closest('tr');
+                var url = $(this).attr('href');
+                var id = row.attr('id');
+                $.post( url, {id: id}, function(){
+                    row.remove();
+                } );
+            }
+            return false;
+        });
+
+        $('.form-import').on('ajax:success', function (e, data) {
+            $('div.success-import strong.counter').text(data.counter);
+            $('div.success-import').slideDown();
+            window.location.reload();
+        });
+
+        $('.form-find').on('ajax:success', function (e, data) {
+            $('div.success-find strong.counter').text(data.counter);
+            $('div.success-find').slideDown();
+            window.location.reload();
+        });
+
+        $('.form-publish').on('ajax:success', function (e, data) {
+            $('div.success-publish').slideDown();
+        });
+
+        $('.form-publish-all').on('ajax:success', function (e, data) {
+            $('div.success-publish-all').slideDown();
+        });
+        $('.enable-auto-translate-group').click(function (event) {
+            event.preventDefault();
+            $('.autotranslate-block-group').removeClass('hidden');
+            $('.enable-auto-translate-group').addClass('hidden');
+        })
+        $('#base-locale').change(function (event) {
+            console.log($(this).val());
+            $.cookie('base_locale', $(this).val());
+        })
+        if (typeof $.cookie('base_locale') !== 'undefined') {
+            $('#base-locale').val($.cookie('base_locale'));
+        }
+
+
+        $('.table').DataTable();
+
+    })
+</script>
 
 </body>
 </html>

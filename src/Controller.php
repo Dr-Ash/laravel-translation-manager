@@ -40,12 +40,13 @@ class Controller extends BaseController
             $translations[$translation->key][$translation->locale] = $translation;
         }
 
-         return view('translation-manager::index')
+        return view('translation-manager::index')
             ->with('translations', $translations)
             ->with('locales', $locales)
             ->with('groups', $groups)
             ->with('group', $group)
             ->with('numTranslations', $numTranslations)
+            ->with('numKeys', count($translations))
             ->with('numChanged', $numChanged)
             ->with('editUrl', $group ? action('\Barryvdh\TranslationManager\Controller@postEdit', [$group]) : null)
             ->with('deleteEnabled', $this->manager->getConfig('delete_enabled'));
@@ -128,7 +129,7 @@ class Controller extends BaseController
 
     public function postPublish($group = null)
     {
-         $json = false;
+        $json = false;
 
         if($group === '_json'){
             $json = true;
