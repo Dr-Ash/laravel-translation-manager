@@ -243,6 +243,7 @@
                 settings.data += "&_token=<?php echo csrf_token() ?>";
             }
         });
+        <?php if($group): ?>
         var trrr = <?php echo json_encode($translations) ?>;
         var locales = <?php echo json_encode($locales) ?>;
         var ht = '';
@@ -279,7 +280,7 @@
         });
         // console.log(ht);
         document.getElementById('table-body').innerHTML=ht;
-
+        <?php endif; ?>
         $('.editable').editable().on('hidden', function(e, reason){
             var locale = $(this).data('locale');
             if(reason === 'save'){
@@ -346,10 +347,9 @@
         if (typeof $.cookie('base_locale') !== 'undefined') {
             $('#base-locale').val($.cookie('base_locale'));
         }
-
-
+        <?php if($group): ?>
         $('.table').DataTable();
-
+        <?php endif; ?>
     })
 </script>
 
